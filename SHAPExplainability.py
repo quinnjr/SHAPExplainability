@@ -14,8 +14,35 @@ Author: Joseph R. Quinn <quinn.josephr@protonmail.com>
 License: MIT
 
 References:
-    Lundberg & Lee (2017). A unified approach to interpreting model predictions.
-    NIPS 2017.
+    SHAP Theory & Implementation:
+    - Lundberg SM, Lee SI (2017). A Unified Approach to Interpreting Model 
+      Predictions. NIPS 2017. arXiv:1705.07874 [Core SHAP methodology]
+    
+    - Lundberg SM, Erion G, Chen H, et al. (2020). From local explanations to 
+      global understanding with explainable AI for trees. Nat Mach Intell. 
+      2:56-67. doi:10.1038/s42256-019-0138-9 [TreeSHAP]
+    
+    - Lundberg SM, Nair B, Vavilala MS, et al. (2018). Explainable machine-
+      learning predictions for the prevention of hypoxaemia during surgery. 
+      Nat Biomed Eng. 2:749-760. doi:10.1038/s41551-018-0304-0 [Clinical SHAP]
+    
+    Shapley Values Foundation:
+    - Shapley LS (1953). A Value for N-Person Games. In: Kuhn HW, Tucker AW 
+      (eds) Contributions to the Theory of Games II. Princeton University 
+      Press. pp. 307-317. doi:10.1515/9781400881970-018 [Original Shapley]
+    
+    - Strumbelj E, Kononenko I (2014). Explaining prediction models and 
+      individual predictions with feature contributions. Knowl Inf Syst. 
+      41:647-665. doi:10.1007/s10115-013-0679-x [Shapley for ML]
+    
+    Explainable AI in Bioinformatics:
+    - Ribeiro MT, Singh S, Guestrin C (2016). "Why Should I Trust You?": 
+      Explaining the Predictions of Any Classifier. KDD '16. 
+      doi:10.1145/2939672.2939778 [LIME, related to SHAP]
+    
+    - Murdoch WJ, Singh C, Kumbier K, Abbasi-Asl R, Yu B (2019). Definitions, 
+      methods, and applications in interpretable machine learning. PNAS. 
+      116(44):22071-22080. doi:10.1073/pnas.1900654116 [XAI review]
 """
 
 from __future__ import annotations
