@@ -1,0 +1,19 @@
+# SHAPExplainability Plugin Dependencies
+# SHAP-based feature attribution and model interpretability
+
+# Core data handling
+numpy>=1.24.0
+pandas>=2.0.0
+
+# SHAP explainability
+shap>=0.44.0
+
+# Machine learning (for model compatibility)
+scikit-learn>=1.3.0
+
+# Visualization
+matplotlib>=3.7.0
+seaborn>=0.13.0
+
+# Optional: For probability conversion
+scipy>=1.10.0

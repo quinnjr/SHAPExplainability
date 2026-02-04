@@ -1,0 +1,15 @@
+# SHAPExplainability Plugin Parameters
+#
+# Input files
+model	CSV/trained_model.pkl
+features	CSV/fused_matrix.csv
+labels	CSV/sample_labels.csv
+
+# SHAP explainer settings
+# Options: tree, kernel, linear, deep, auto
+explainer	auto
+background_samples	100
+
+# Output settings
+n_top_features	20
+compute_interactions	false
