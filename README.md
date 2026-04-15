@@ -77,12 +77,15 @@ Skip the slow integration tests with `pytest -m "not slow"`.
 
 ### PluMA contract verification
 
-The `example/` directory ships a deterministic fixture (sklearn's
-breast_cancer dataset with synthetic modality prefixes) and golden
-`.expected` output files.
+The `example/` directory ships a deterministic fixture based on the
+UCI Parkinson's Voice Dataset (Little et al. 2007; 195 recordings x
+22 biomedical voice features; 147 PD / 48 healthy) with modality
+prefixes for vocal characteristics (`VC_`, 16 features) and
+nonlinear dynamics (`ND_`, 6 features), and golden `.expected`
+output files.
 
 ```bash
-# Regenerate the fixture (one-time; rerun if sklearn or seeds change)
+# Regenerate the fixture (downloads from archive.ics.uci.edu)
 python scripts/fetch_test_data.py
 
 # Run the plugin and compare against expected outputs
@@ -146,6 +149,11 @@ SHAP values enable:
 
 7. **Murdoch WJ, Singh C, Kumbier K, Abbasi-Asl R, Yu B** (2019). Definitions, methods, and applications in interpretable machine learning. *PNAS*, 116(44):22071-22080. [doi:10.1073/pnas.1900654116](https://doi.org/10.1073/pnas.1900654116)
    - *Comprehensive review of interpretable ML*
+
+### Test Fixture Dataset
+
+8. **Little MA, McSharry PE, Roberts SJ, Costello DAE, Moroz IM** (2007). Exploiting Nonlinear Recurrence and Fractal Scaling Properties for Voice Disorder Detection. *Biomedical Engineering Online*, 6:23. [doi:10.1186/1475-925X-6-23](https://doi.org/10.1186/1475-925X-6-23)
+   - *UCI Parkinsons Voice Dataset used by the committed `example/` fixture*
 
 ## Visualization Examples
 
