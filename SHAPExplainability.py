@@ -8,7 +8,7 @@ This plugin provides:
 1. SHAP value computation for any sklearn-compatible classifier
 2. Feature importance rankings across modalities
 3. Cross-modal interaction analysis
-4. Visualization outputs (summary plots, force plots, dependence plots)
+4. Visualization outputs (summary plots, bar plots, dependence plots, modality comparisons)
 
 Author: Joseph R. Quinn <quinn.josephr@protonmail.com>
 License: MIT
@@ -55,7 +55,7 @@ import numpy as np
 import pandas as pd
 
 
-ExplainerType = Literal["tree", "kernel", "linear", "deep", "auto"]
+ExplainerType = Literal["tree", "kernel", "linear", "auto"]
 
 
 class SHAPExplainability:
@@ -69,7 +69,7 @@ class SHAPExplainability:
         model: Path to pickled sklearn model/pipeline
         features: Path to feature matrix (samples x features)
         labels: Path to sample labels CSV
-        explainer: SHAP explainer type ("tree", "kernel", "linear", "deep", "auto")
+        explainer: SHAP explainer type ("tree", "kernel", "linear", "auto")
         background_samples: Number of background samples for kernel SHAP (default: 100)
         n_top_features: Number of top features to report (default: 20)
         compute_interactions: Whether to compute SHAP interactions (default: false)
@@ -78,7 +78,7 @@ class SHAPExplainability:
         - SHAP values matrix (samples x features)
         - Feature importance rankings
         - Per-modality importance summary
-        - Visualization plots (PNG/HTML)
+        - Visualization plots (PNG)
     """
     
     def __init__(self) -> None:
@@ -269,11 +269,6 @@ class SHAPExplainability:
                 self._predict_proba,
                 background
             )
-        
-        elif self.explainer_type == "deep":
-            # For deep learning models
-            # TODO: Implement deep explainer
-            raise NotImplementedError("Deep explainer not yet implemented")
         
         else:
             raise ValueError(f"Unknown explainer type: {self.explainer_type}")
