@@ -376,6 +376,27 @@ class TestOutput:
         assert output_path.with_suffix(".bar_plot.png").exists()
 
 
+class TestWriteSummary:
+    """Tests for summary text file generation."""
+
+    def test_expected_value_array_does_not_crash(self, temp_dir):
+        """_write_summary must handle array-valued expected_value."""
+        plugin = SHAPExplainability()
+        plugin.features = pd.DataFrame(
+            np.zeros((3, 2)),
+            columns=["MG_a", "TX_b"],
+            index=["s0", "s1", "s2"],
+        )
+        plugin.expected_value = np.array([0.3, 0.7])
+        plugin.explainer_type = "tree"
+
+        out = temp_dir / "summary.txt"
+        plugin._write_summary(out)
+        assert out.exists()
+        text = out.read_text()
+        assert "Expected value" in text
+
+
 class TestNormalizeShapOutput:
     """Tests for SHAP output normalization across versions."""
 

@@ -627,7 +627,12 @@ class SHAPExplainability:
             f.write(f"Explainer type: {self.explainer_type}\n")
             
             if self.expected_value is not None:
-                f.write(f"Expected value (base rate): {self.expected_value:.4f}\n")
+                ev = self.expected_value
+                if isinstance(ev, np.ndarray):
+                    ev_str = np.array2string(ev, precision=4, separator=", ")
+                else:
+                    ev_str = f"{float(ev):.4f}"
+                f.write(f"Expected value (base rate): {ev_str}\n")
             
             if self.feature_importance is not None:
                 f.write(f"\nTop {self.n_top_features} Most Important Features:\n")
