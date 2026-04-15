@@ -8,7 +8,7 @@ This plugin provides:
 1. SHAP value computation for any sklearn-compatible classifier
 2. Feature importance rankings across modalities
 3. Cross-modal interaction analysis
-4. Visualization outputs (summary plots, force plots, dependence plots)
+4. Visualization outputs (summary plots, bar plots, dependence plots, modality comparisons)
 
 Author: Joseph R. Quinn <quinn.josephr@protonmail.com>
 License: MIT
@@ -47,15 +47,15 @@ References:
 
 from __future__ import annotations
 
-import pickle
 from pathlib import Path
 from typing import Any, Literal
 
+import joblib
 import numpy as np
 import pandas as pd
 
 
-ExplainerType = Literal["tree", "kernel", "linear", "deep", "auto"]
+ExplainerType = Literal["tree", "kernel", "linear", "auto"]
 
 
 class SHAPExplainability:
@@ -69,7 +69,7 @@ class SHAPExplainability:
         model: Path to pickled sklearn model/pipeline
         features: Path to feature matrix (samples x features)
         labels: Path to sample labels CSV
-        explainer: SHAP explainer type ("tree", "kernel", "linear", "deep", "auto")
+        explainer: SHAP explainer type ("tree", "kernel", "linear", "auto")
         background_samples: Number of background samples for kernel SHAP (default: 100)
         n_top_features: Number of top features to report (default: 20)
         compute_interactions: Whether to compute SHAP interactions (default: false)
@@ -78,7 +78,7 @@ class SHAPExplainability:
         - SHAP values matrix (samples x features)
         - Feature importance rankings
         - Per-modality importance summary
-        - Visualization plots (PNG/HTML)
+        - Visualization plots (PNG)
     """
     
     def __init__(self) -> None:
@@ -122,10 +122,13 @@ class SHAPExplainability:
                     if len(parts) == 2:
                         self.parameters[parts[0]] = parts[1]
         
-        # Load trained model
+        # Load trained model. joblib is sklearn's recommended serializer and
+        # transparently loads both joblib-dumped artefacts and legacy formats
+        # produced by the standard library's serializer, so we have one code
+        # path that works for both the committed example fixture (.joblib) and
+        # any existing PluMA pipelines that ship .pkl files.
         if "model" in self.parameters:
-            with open(self.parameters["model"], "rb") as f:
-                self.model = pickle.load(f)
+            self.model = joblib.load(self.parameters["model"])
         
         # Load feature matrix
         if "features" in self.parameters:
@@ -270,11 +273,6 @@ class SHAPExplainability:
                 background
             )
         
-        elif self.explainer_type == "deep":
-            # For deep learning models
-            # TODO: Implement deep explainer
-            raise NotImplementedError("Deep explainer not yet implemented")
-        
         else:
             raise ValueError(f"Unknown explainer type: {self.explainer_type}")
     
@@ -342,25 +340,88 @@ class SHAPExplainability:
     def _compute_shap_values(self) -> tuple[np.ndarray, float | np.ndarray]:
         """
         Compute SHAP values for all samples.
-        
+
         Returns:
-            Tuple of (SHAP values array, expected value)
+            Tuple of (SHAP values array normalized to (n_samples, n_features),
+            expected value)
         """
         X = self.features.values  # type: ignore
-        
-        # Compute SHAP values
-        shap_values = self.explainer.shap_values(X)
-        
-        # Handle multi-class case
-        if isinstance(shap_values, list):
-            # For binary classification, take positive class
-            shap_values = shap_values[1]
-        
+
+        raw = self.explainer.shap_values(X)
+        shap_values = self._normalize_shap_output(raw)
+
         expected_value = self.explainer.expected_value
-        if isinstance(expected_value, (list, np.ndarray)) and len(expected_value) > 1:
-            expected_value = expected_value[1]
-        
+        expected_value = self._normalize_expected_value(expected_value)
+
         return shap_values, expected_value
+
+    def _normalize_shap_output(self, raw: Any) -> np.ndarray:
+        """
+        Normalize SHAP output across library versions into a 2D positive-class
+        array of shape (n_samples, n_features).
+
+        Handles:
+        - list of per-class arrays (legacy API)
+        - shap.Explanation objects (new API)
+        - 2D arrays (binary-only single-array form)
+        - 3D arrays with a trailing class axis (new multi-class API)
+
+        Args:
+            raw: The object returned by shap.Explainer.shap_values().
+
+        Returns:
+            2D numpy array of shape (n_samples, n_features).
+        """
+        # Explanation-like object — unwrap to its underlying .values
+        if hasattr(raw, "values") and not isinstance(raw, np.ndarray):
+            return self._normalize_shap_output(np.asarray(raw.values))
+
+        # Legacy list of per-class arrays — take positive class (index 1)
+        if isinstance(raw, list):
+            if len(raw) >= 2:
+                return np.asarray(raw[1])
+            return np.asarray(raw[0])
+
+        arr = np.asarray(raw)
+
+        # 2D: already correct shape
+        if arr.ndim == 2:
+            return arr
+
+        # 3D with class axis last — pick positive class
+        if arr.ndim == 3:
+            # New SHAP API: (n_samples, n_features, n_classes)
+            if arr.shape[-1] >= 2:
+                return arr[..., 1]
+            return arr[..., 0]
+
+        raise ValueError(
+            f"Unexpected SHAP output shape {arr.shape}; "
+            "expected 2D (n_samples, n_features) or 3D with trailing class axis."
+        )
+
+    def _normalize_expected_value(self, raw: Any) -> float | np.ndarray:
+        """
+        Normalize expected_value across library versions to a scalar for
+        binary classification.
+
+        Args:
+            raw: The expected_value attribute from the SHAP explainer.
+
+        Returns:
+            Scalar float (preferred) or array if the shape is unusual.
+        """
+        if hasattr(raw, "values") and not isinstance(raw, np.ndarray):
+            raw = raw.values
+
+        arr = np.asarray(raw)
+        if arr.ndim == 0:
+            return float(arr)
+        if arr.ndim == 1 and arr.size >= 2:
+            return float(arr[1])
+        if arr.ndim == 1 and arr.size == 1:
+            return float(arr[0])
+        return arr
     
     def _compute_feature_importance(self) -> pd.DataFrame:
         """
@@ -564,7 +625,12 @@ class SHAPExplainability:
             f.write(f"Explainer type: {self.explainer_type}\n")
             
             if self.expected_value is not None:
-                f.write(f"Expected value (base rate): {self.expected_value:.4f}\n")
+                ev = self.expected_value
+                if isinstance(ev, np.ndarray):
+                    ev_str = np.array2string(ev, precision=4, separator=", ")
+                else:
+                    ev_str = f"{float(ev):.4f}"
+                f.write(f"Expected value (base rate): {ev_str}\n")
             
             if self.feature_importance is not None:
                 f.write(f"\nTop {self.n_top_features} Most Important Features:\n")

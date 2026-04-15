@@ -13,7 +13,9 @@ scikit-learn>=1.3.0
 
 # Visualization
 matplotlib>=3.7.0
-seaborn>=0.13.0
 
 # Optional: For probability conversion
 scipy>=1.10.0
+
+# Model serialization for example fixture
+joblib>=1.3.0
