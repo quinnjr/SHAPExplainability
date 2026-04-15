@@ -9,7 +9,7 @@ This plugin provides:
 1. SHAP value computation for any sklearn-compatible classifier
 2. Feature importance rankings across modalities
 3. Cross-modal interaction analysis
-4. Visualization outputs (summary plots, force plots, dependence plots)
+4. Visualization outputs (summary plots, bar plots, dependence plots, modality comparisons)
 
 ## Installation
 
@@ -28,7 +28,8 @@ pip install -r requirements.txt
 - shap
 - scikit-learn
 - matplotlib
-- seaborn
+- scipy
+- joblib
 
 ## Usage
 
@@ -39,7 +40,7 @@ pip install -r requirements.txt
 | `model` | Path to pickled sklearn model/pipeline | Required |
 | `features` | Path to feature matrix (samples x features) | Required |
 | `labels` | Path to sample labels CSV | Required |
-| `explainer` | SHAP explainer: `tree`, `kernel`, `linear`, `deep`, `auto` | `auto` |
+| `explainer` | SHAP explainer: `tree`, `kernel`, `linear`, `auto` | `auto` |
 | `background_samples` | Number of background samples for kernel SHAP | `100` |
 | `n_top_features` | Number of top features to report | `20` |
 | `compute_interactions` | Whether to compute SHAP interactions | `false` |
@@ -61,7 +62,36 @@ compute_interactions false
 - SHAP values matrix (samples x features)
 - Feature importance rankings
 - Modality-wise importance breakdown
-- Visualization plots (PNG/HTML)
+- Visualization plots (PNG: summary, bar, dependence, modality comparison)
+
+## Testing
+
+### Unit and integration tests (pytest)
+
+```bash
+pip install -r requirements-test.txt
+pytest
+```
+
+Skip the slow integration tests with `pytest -m "not slow"`.
+
+### PluMA contract verification
+
+The `example/` directory ships a deterministic fixture (sklearn's
+breast_cancer dataset with synthetic modality prefixes) and golden
+`.expected` output files.
+
+```bash
+# Regenerate the fixture (one-time; rerun if sklearn or seeds change)
+python scripts/fetch_test_data.py
+
+# Run the plugin and compare against expected outputs
+python scripts/verify_pluma.py
+```
+
+`verify_pluma.py` exits 0 when every generated file matches its
+`.expected` twin within floating-point tolerance (EPS=1e-8, matching
+PluMA's own `testPluMA.py` logic).
 
 ## Methods
 
@@ -80,7 +110,6 @@ Where φᵢ is the SHAP value for feature i, representing its contribution to th
 - **TreeSHAP**: Exact, fast computation for tree-based models (Random Forest, XGBoost, LightGBM)
 - **KernelSHAP**: Model-agnostic, uses weighted linear regression
 - **LinearSHAP**: Exact computation for linear models
-- **DeepSHAP**: Approximation for deep neural networks
 
 ### Multi-omics Insights
 
@@ -125,7 +154,7 @@ The plugin generates several visualization types:
 - **Summary Plot**: Global feature importance with distribution of SHAP values
 - **Bar Plot**: Mean absolute SHAP values per feature
 - **Dependence Plot**: SHAP value vs feature value for specific features
-- **Force Plot**: Individual prediction explanations
+- **Modality Comparison**: Relative contribution of each omics modality
 
 ## License
 
