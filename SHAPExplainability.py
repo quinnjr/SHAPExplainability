@@ -47,10 +47,10 @@ References:
 
 from __future__ import annotations
 
-import pickle
 from pathlib import Path
 from typing import Any, Literal
 
+import joblib
 import numpy as np
 import pandas as pd
 
@@ -122,10 +122,13 @@ class SHAPExplainability:
                     if len(parts) == 2:
                         self.parameters[parts[0]] = parts[1]
         
-        # Load trained model
+        # Load trained model. joblib is sklearn's recommended serializer and
+        # transparently loads both joblib-dumped artefacts and legacy formats
+        # produced by the standard library's serializer, so we have one code
+        # path that works for both the committed example fixture (.joblib) and
+        # any existing PluMA pipelines that ship .pkl files.
         if "model" in self.parameters:
-            with open(self.parameters["model"], "rb") as f:
-                self.model = pickle.load(f)
+            self.model = joblib.load(self.parameters["model"])
         
         # Load feature matrix
         if "features" in self.parameters:
