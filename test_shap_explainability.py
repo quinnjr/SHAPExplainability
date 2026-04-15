@@ -479,5 +479,65 @@ class TestNormalizeShapOutput:
         assert np.all(normalized == 1.0)
 
 
+class TestPluMAContract:
+    """Integration test: run plugin against example/ fixture, compare to .expected."""
+
+    @pytest.mark.slow
+    def test_plugin_matches_expected_outputs(self, tmp_path):
+        """End-to-end: plugin output must match committed .expected files within EPS."""
+        from SHAPExplainabilityPlugin import SHAPExplainabilityPlugin
+
+        repo_root = Path(__file__).resolve().parent
+        example = repo_root / "example"
+        if not (example / "model.joblib").exists():
+            pytest.skip(
+                "example/model.joblib missing - run scripts/fetch_test_data.py first"
+            )
+
+        params = tmp_path / "parameters.txt"
+        params.write_text(
+            f"model\t{example}/model.joblib\n"
+            f"features\t{example}/features.csv\n"
+            f"labels\t{example}/labels.csv\n"
+            "explainer\ttree\n"
+            "background_samples\t50\n"
+            "n_top_features\t10\n"
+            "compute_interactions\tfalse\n"
+        )
+
+        plugin = SHAPExplainabilityPlugin()
+        plugin.input(str(params))
+        plugin.run()
+        plugin.output(str(tmp_path / "output"))
+
+        EPS = 1e-8
+        for expected_file in sorted(example.glob("output.*.expected")):
+            suffix = expected_file.name[: -len(".expected")]
+            generated = tmp_path / suffix
+            assert generated.exists(), f"{suffix} was not generated"
+
+            is_csv = generated.suffix == ".csv"
+            gen_lines = sorted(generated.read_text().splitlines())
+            exp_lines = sorted(expected_file.read_text().splitlines())
+            assert len(gen_lines) == len(exp_lines), (
+                f"{suffix}: line counts differ "
+                f"({len(gen_lines)} vs {len(exp_lines)})"
+            )
+            for i, (a, b) in enumerate(zip(gen_lines, exp_lines)):
+                d1 = a.split(",") if is_csv else a.split()
+                d2 = b.split(",") if is_csv else b.split()
+                assert len(d1) == len(d2), (
+                    f"{suffix} line {i}: field count {len(d1)} vs {len(d2)}"
+                )
+                for j, (x, y) in enumerate(zip(d1, d2)):
+                    try:
+                        xf, yf = float(x), float(y)
+                        assert abs(xf - yf) <= EPS, (
+                            f"{suffix} line {i} field {j}: |{xf} - {yf}| > {EPS}"
+                        )
+                    except ValueError:
+                        assert x == y, f"{suffix} line {i} field {j}: {x!r} != {y!r}"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
