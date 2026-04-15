@@ -8,9 +8,12 @@ PluMA plugin for SHAP (SHapley Additive exPlanations) based feature attribution 
 
 Single-module plugin following the PluMA plugin contract:
 
-- `SHAPExplainability.py` — the entire plugin: class `SHAPExplainability` with `input()` / `run()` / `output()` lifecycle and private `_snake_case` helpers for explainer creation, SHAP computation, importance aggregation, modality extraction, and visualization.
+- `SHAPExplainability.py` — the core class `SHAPExplainability` with `input()` / `run()` / `output()` lifecycle and private `_snake_case` helpers for explainer creation, SHAP computation, importance aggregation, modality extraction, and visualization.
+- `SHAPExplainabilityPlugin.py` — thin subclass named per PluMA convention (`<Name>Plugin.py` with class `<Name>Plugin`) so the PluMA Python loader can instantiate it. Delegates all behavior to the core class.
 - `test_shap_explainability.py` — pytest suite with synthetic data and sklearn models.
 - `scripts/release.py` — semver tagging and optional GitHub release via `gh`.
+- `scripts/fetch_test_data.py` — downloads and prepares the example fixture.
+- `scripts/verify_pluma.py` — runs the plugin as PluMA would and compares outputs against `example/*.expected`.
 - `parameters.shap.txt` — example parameter file.
 
 No package structure, no `__init__.py`, no CLI entry point. The class is instantiated by PluMA's plugin loader.
