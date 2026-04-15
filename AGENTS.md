@@ -22,11 +22,11 @@ No package structure, no `__init__.py`, no CLI entry point. The class is instant
 
 - **Language:** Python 3. Uses `from __future__ import annotations`, `Literal`, and `X | Y` union syntax.
 - **Naming:** Class name matches the filename exactly (`SHAPExplainability`). Private methods use `_snake_case`.
-- **Types:** `ExplainerType = Literal["tree", "kernel", "linear", "deep", "auto"]`. Instance attributes are typed in `__init__`.
+- **Types:** `ExplainerType = Literal["tree", "kernel", "linear", "auto"]`. Instance attributes are typed in `__init__`.
 - **Docstrings:** Google-style with `Args:` / `Returns:` sections on all methods.
 - **Dependencies:** Pinned minimum versions in `requirements.txt`. No build system or packaging manifest.
 - **Plotting:** Uses matplotlib with the `Agg` (non-interactive) backend.
-- **Model loading:** The plugin deserializes sklearn models/pipelines from files via the `input()` method. Models are expected to be sklearn-compatible with `predict_proba` or `decision_function`.
+- **Model loading:** The plugin loads sklearn models/pipelines via `joblib.load`, which handles both joblib-serialized artefacts (`.joblib`) and legacy serialized files (`.pkl`). Models must be sklearn-compatible with `predict_proba` or `decision_function`.
 - **No MuPDF.** Use Micropdf if PDF handling is ever needed.
 
 ## Testing
@@ -36,10 +36,12 @@ No package structure, no `__init__.py`, no CLI entry point. The class is instant
 - **Test deps:** `pytest>=7.4.0`, `pytest-cov>=4.1.0` (via `requirements-test.txt`).
 - **Markers:** `slow` for expensive tests (`-m "not slow"` to skip).
 - **Pattern:** Fixtures create synthetic feature matrices and train LogisticRegression/RandomForest models; test classes are `Test*`, functions are `test_*`.
+- **PluMA contract test:** `python scripts/verify_pluma.py` runs the plugin against `example/` and diffs generated outputs against `*.expected` using the same EPS=1e-8 comparison as PluMA's `testPluMA.py`.
+- **Fixture regeneration:** `python scripts/fetch_test_data.py` rebuilds `example/features.csv`, `example/labels.csv`, and `example/model.joblib` deterministically from sklearn's `breast_cancer` dataset.
 
 ## Parameter File Format
 
-Whitespace-delimited key-value file (one pair per line, `#` comments ignored). Keys: `model` (path to serialized sklearn model/pipeline), `features` (CSV, samples x features, `index_col=0`), `labels` (CSV, first column), `explainer` (`tree`/`kernel`/`linear`/`deep`/`auto`), `background_samples`, `n_top_features`, `compute_interactions` (`true`/`false`).
+Whitespace-delimited key-value file (one pair per line, `#` comments ignored; tab-separated PyIO format also accepted). Keys: `model` (path to serialized sklearn model/pipeline, `.joblib` or `.pkl`), `features` (CSV, samples x features, `index_col=0`), `labels` (CSV, first column), `explainer` (`tree`/`kernel`/`linear`/`auto`), `background_samples`, `n_top_features`, `compute_interactions` (`true`/`false`).
 
 ## Pipeline Steps (run method)
 
@@ -63,12 +65,11 @@ All outputs derive from the base path passed to `output()` using `Path.with_suff
 - `*.modality_comparison.png` — bar chart of relative modality contributions
 - `*.summary.txt` — human-readable text summary
 
-## Known TODOs and Discrepancies
+## Known Limitations
 
-- **`deep` explainer:** Listed in `ExplainerType` and documented in README, but raises `NotImplementedError` at runtime.
-- **Force plots / HTML:** README lists force plots and HTML output; the code only generates PNG (summary, bar, dependence, modality comparison). No `shap.force_plot` or HTML export exists.
-- **`scipy`:** Used at runtime (`scipy.special.expit` in `_predict_proba` fallback) but not listed in README's dependency bullets (it is in `requirements.txt`).
-- **No `LICENSE` file** in the directory despite README stating MIT.
+- **`deep` explainer:** Not implemented. `DeepExplainer` for neural networks is out of scope for this plugin. The `ExplainerType` literal and README list only the four supported types: `tree`, `kernel`, `linear`, `auto`.
+- **No force plots / HTML:** Only PNG outputs are produced (`summary_plot`, `bar_plot`, `dependence_*`, `modality_comparison`).
+- **KernelExplainer non-determinism:** Uses a random background sample. For reproducible pipelines prefer `TreeExplainer` (used in the committed fixture).
 
 ## Release
 
