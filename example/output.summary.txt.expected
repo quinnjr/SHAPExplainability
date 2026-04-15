@@ -1,0 +1,31 @@
+SHAPExplainability Summary
+========================================
+
+Number of samples: 569
+Number of features: 30
+Explainer type: tree
+Expected value (base rate): 0.6289
+
+Top 10 Most Important Features:
+----------------------------------------
+    1. MG_mean_concave_points                   (metagenomics   ): 0.0626
+    2. TX_worst_concave_points                  (transcriptomics): 0.0584
+    3. TX_worst_perimeter                       (transcriptomics): 0.0533
+    4. TX_worst_radius                          (transcriptomics): 0.0452
+    5. TX_worst_area                            (transcriptomics): 0.0354
+    6. MG_mean_radius                           (metagenomics   ): 0.0345
+    7. MG_area_error                            (metagenomics   ): 0.0291
+    8. TX_worst_concavity                       (transcriptomics): 0.0291
+    9. MG_mean_perimeter                        (metagenomics   ): 0.0288
+   10. MG_mean_concavity                        (metagenomics   ): 0.0279
+
+Importance by Modality:
+----------------------------------------
+  transcriptomics: 52.3% (15 features)
+  metagenomics   : 47.7% (15 features)
+
+Parameters:
+  explainer: tree
+  background_samples: 50
+  n_top_features: 10
+  compute_interactions: False
