@@ -37,7 +37,7 @@ No package structure, no `__init__.py`, no CLI entry point. The class is instant
 - **Markers:** `slow` for expensive tests (`-m "not slow"` to skip).
 - **Pattern:** Fixtures create synthetic feature matrices and train LogisticRegression/RandomForest models; test classes are `Test*`, functions are `test_*`.
 - **PluMA contract test:** `python scripts/verify_pluma.py` runs the plugin against `example/` and diffs generated outputs against `*.expected` using the same EPS=1e-8 comparison as PluMA's `testPluMA.py`.
-- **Fixture regeneration:** `python scripts/fetch_test_data.py` rebuilds `example/features.csv`, `example/labels.csv`, and `example/model.joblib` deterministically from sklearn's `breast_cancer` dataset.
+- **Fixture regeneration:** `python scripts/fetch_test_data.py` rebuilds `example/features.csv`, `example/labels.csv`, and `example/model.joblib` by downloading the UCI Parkinsons Voice Dataset (Little et al. 2007) from `archive.ics.uci.edu` and training a deterministic `RandomForestClassifier(random_state=42)` on it. Requires internet access on first run.
 
 ## Parameter File Format
 
