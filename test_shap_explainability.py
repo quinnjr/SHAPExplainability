@@ -376,5 +376,54 @@ class TestOutput:
         assert output_path.with_suffix(".bar_plot.png").exists()
 
 
+class TestNormalizeShapOutput:
+    """Tests for SHAP output normalization across versions."""
+
+    def test_list_binary_returns_positive_class(self):
+        plugin = SHAPExplainability()
+        raw = [np.zeros((5, 3)), np.ones((5, 3))]
+        normalized = plugin._normalize_shap_output(raw)
+        assert normalized.shape == (5, 3)
+        assert np.all(normalized == 1.0)
+
+    def test_list_multiclass_returns_positive_class(self):
+        plugin = SHAPExplainability()
+        raw = [np.zeros((5, 3)), np.ones((5, 3)), np.full((5, 3), 2.0)]
+        normalized = plugin._normalize_shap_output(raw)
+        assert normalized.shape == (5, 3)
+        assert np.all(normalized == 1.0)
+
+    def test_2d_array_passes_through(self):
+        plugin = SHAPExplainability()
+        raw = np.arange(15).reshape(5, 3).astype(float)
+        normalized = plugin._normalize_shap_output(raw)
+        assert normalized.shape == (5, 3)
+        assert np.array_equal(normalized, raw)
+
+    def test_3d_binary_returns_positive_slice(self):
+        plugin = SHAPExplainability()
+        raw = np.zeros((5, 3, 2))
+        raw[..., 1] = 1.0
+        normalized = plugin._normalize_shap_output(raw)
+        assert normalized.shape == (5, 3)
+        assert np.all(normalized == 1.0)
+
+    def test_3d_multiclass_returns_positive_slice(self):
+        plugin = SHAPExplainability()
+        raw = np.zeros((5, 3, 4))
+        raw[..., 1] = 1.0
+        normalized = plugin._normalize_shap_output(raw)
+        assert normalized.shape == (5, 3)
+        assert np.all(normalized == 1.0)
+
+    def test_explanation_object(self):
+        class FakeExplanation:
+            values = np.ones((5, 3))
+        plugin = SHAPExplainability()
+        normalized = plugin._normalize_shap_output(FakeExplanation())
+        assert normalized.shape == (5, 3)
+        assert np.all(normalized == 1.0)
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

@@ -342,25 +342,88 @@ class SHAPExplainability:
     def _compute_shap_values(self) -> tuple[np.ndarray, float | np.ndarray]:
         """
         Compute SHAP values for all samples.
-        
+
         Returns:
-            Tuple of (SHAP values array, expected value)
+            Tuple of (SHAP values array normalized to (n_samples, n_features),
+            expected value)
         """
         X = self.features.values  # type: ignore
-        
-        # Compute SHAP values
-        shap_values = self.explainer.shap_values(X)
-        
-        # Handle multi-class case
-        if isinstance(shap_values, list):
-            # For binary classification, take positive class
-            shap_values = shap_values[1]
-        
+
+        raw = self.explainer.shap_values(X)
+        shap_values = self._normalize_shap_output(raw)
+
         expected_value = self.explainer.expected_value
-        if isinstance(expected_value, (list, np.ndarray)) and len(expected_value) > 1:
-            expected_value = expected_value[1]
-        
+        expected_value = self._normalize_expected_value(expected_value)
+
         return shap_values, expected_value
+
+    def _normalize_shap_output(self, raw: Any) -> np.ndarray:
+        """
+        Normalize SHAP output across library versions into a 2D positive-class
+        array of shape (n_samples, n_features).
+
+        Handles:
+        - list of per-class arrays (legacy API)
+        - shap.Explanation objects (new API)
+        - 2D arrays (binary-only single-array form)
+        - 3D arrays with a trailing class axis (new multi-class API)
+
+        Args:
+            raw: The object returned by shap.Explainer.shap_values().
+
+        Returns:
+            2D numpy array of shape (n_samples, n_features).
+        """
+        # Explanation-like object — unwrap to its underlying .values
+        if hasattr(raw, "values") and not isinstance(raw, np.ndarray):
+            return self._normalize_shap_output(np.asarray(raw.values))
+
+        # Legacy list of per-class arrays — take positive class (index 1)
+        if isinstance(raw, list):
+            if len(raw) >= 2:
+                return np.asarray(raw[1])
+            return np.asarray(raw[0])
+
+        arr = np.asarray(raw)
+
+        # 2D: already correct shape
+        if arr.ndim == 2:
+            return arr
+
+        # 3D with class axis last — pick positive class
+        if arr.ndim == 3:
+            # New SHAP API: (n_samples, n_features, n_classes)
+            if arr.shape[-1] >= 2:
+                return arr[..., 1]
+            return arr[..., 0]
+
+        raise ValueError(
+            f"Unexpected SHAP output shape {arr.shape}; "
+            "expected 2D (n_samples, n_features) or 3D with trailing class axis."
+        )
+
+    def _normalize_expected_value(self, raw: Any) -> float | np.ndarray:
+        """
+        Normalize expected_value across library versions to a scalar for
+        binary classification.
+
+        Args:
+            raw: The expected_value attribute from the SHAP explainer.
+
+        Returns:
+            Scalar float (preferred) or array if the shape is unusual.
+        """
+        if hasattr(raw, "values") and not isinstance(raw, np.ndarray):
+            raw = raw.values
+
+        arr = np.asarray(raw)
+        if arr.ndim == 0:
+            return float(arr)
+        if arr.ndim == 1 and arr.size >= 2:
+            return float(arr[1])
+        if arr.ndim == 1 and arr.size == 1:
+            return float(arr[0])
+        return arr
     
     def _compute_feature_importance(self) -> pd.DataFrame:
         """
