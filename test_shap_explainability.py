@@ -376,6 +376,39 @@ class TestOutput:
         assert output_path.with_suffix(".bar_plot.png").exists()
 
 
+class TestParameterParsing:
+    """Tests for parameter file parsing tolerance."""
+
+    def test_tab_separated_parameters(self, temp_dir):
+        param_path = temp_dir / "params.txt"
+        param_path.write_text("explainer\ttree\nbackground_samples\t50\n")
+
+        plugin = SHAPExplainability()
+        plugin.input(str(param_path))
+
+        assert plugin.explainer_type == "tree"
+        assert plugin.background_samples == 50
+
+    def test_space_separated_parameters(self, temp_dir):
+        param_path = temp_dir / "params.txt"
+        param_path.write_text("explainer    tree\nbackground_samples   50\n")
+
+        plugin = SHAPExplainability()
+        plugin.input(str(param_path))
+
+        assert plugin.explainer_type == "tree"
+        assert plugin.background_samples == 50
+
+    def test_comment_lines_ignored(self, temp_dir):
+        param_path = temp_dir / "params.txt"
+        param_path.write_text("# a comment\nexplainer\ttree\n# another\n")
+
+        plugin = SHAPExplainability()
+        plugin.input(str(param_path))
+
+        assert plugin.explainer_type == "tree"
+
+
 class TestWriteSummary:
     """Tests for summary text file generation."""
 
