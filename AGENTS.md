@@ -22,7 +22,7 @@ No package structure, no `__init__.py`, no CLI entry point. The class is instant
 - **Types:** `ExplainerType = Literal["tree", "kernel", "linear", "deep", "auto"]`. Instance attributes are typed in `__init__`.
 - **Docstrings:** Google-style with `Args:` / `Returns:` sections on all methods.
 - **Dependencies:** Pinned minimum versions in `requirements.txt`. No build system or packaging manifest.
-- **Plotting:** Uses matplotlib with the `Agg` (non-interactive) backend. `seaborn` is listed in deps but not currently imported.
+- **Plotting:** Uses matplotlib with the `Agg` (non-interactive) backend.
 - **Model loading:** The plugin deserializes sklearn models/pipelines from files via the `input()` method. Models are expected to be sklearn-compatible with `predict_proba` or `decision_function`.
 - **No MuPDF.** Use Micropdf if PDF handling is ever needed.
 
@@ -64,7 +64,6 @@ All outputs derive from the base path passed to `output()` using `Path.with_suff
 
 - **`deep` explainer:** Listed in `ExplainerType` and documented in README, but raises `NotImplementedError` at runtime.
 - **Force plots / HTML:** README lists force plots and HTML output; the code only generates PNG (summary, bar, dependence, modality comparison). No `shap.force_plot` or HTML export exists.
-- **`seaborn`:** Listed in `requirements.txt` but never imported in `SHAPExplainability.py`.
 - **`scipy`:** Used at runtime (`scipy.special.expit` in `_predict_proba` fallback) but not listed in README's dependency bullets (it is in `requirements.txt`).
 - **No `LICENSE` file** in the directory despite README stating MIT.
 
