@@ -62,3 +62,6 @@ plots/
 # OS
 .DS_Store
 Thumbs.db
+
+# Local-only planning docs (never commit)
+docs/superpowers/
