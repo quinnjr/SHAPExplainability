@@ -376,5 +376,168 @@ class TestOutput:
         assert output_path.with_suffix(".bar_plot.png").exists()
 
 
+class TestParameterParsing:
+    """Tests for parameter file parsing tolerance."""
+
+    def test_tab_separated_parameters(self, temp_dir):
+        param_path = temp_dir / "params.txt"
+        param_path.write_text("explainer\ttree\nbackground_samples\t50\n")
+
+        plugin = SHAPExplainability()
+        plugin.input(str(param_path))
+
+        assert plugin.explainer_type == "tree"
+        assert plugin.background_samples == 50
+
+    def test_space_separated_parameters(self, temp_dir):
+        param_path = temp_dir / "params.txt"
+        param_path.write_text("explainer    tree\nbackground_samples   50\n")
+
+        plugin = SHAPExplainability()
+        plugin.input(str(param_path))
+
+        assert plugin.explainer_type == "tree"
+        assert plugin.background_samples == 50
+
+    def test_comment_lines_ignored(self, temp_dir):
+        param_path = temp_dir / "params.txt"
+        param_path.write_text("# a comment\nexplainer\ttree\n# another\n")
+
+        plugin = SHAPExplainability()
+        plugin.input(str(param_path))
+
+        assert plugin.explainer_type == "tree"
+
+
+class TestWriteSummary:
+    """Tests for summary text file generation."""
+
+    def test_expected_value_array_does_not_crash(self, temp_dir):
+        """_write_summary must handle array-valued expected_value."""
+        plugin = SHAPExplainability()
+        plugin.features = pd.DataFrame(
+            np.zeros((3, 2)),
+            columns=["MG_a", "TX_b"],
+            index=["s0", "s1", "s2"],
+        )
+        plugin.expected_value = np.array([0.3, 0.7])
+        plugin.explainer_type = "tree"
+
+        out = temp_dir / "summary.txt"
+        plugin._write_summary(out)
+        assert out.exists()
+        text = out.read_text()
+        assert "Expected value" in text
+
+
+class TestNormalizeShapOutput:
+    """Tests for SHAP output normalization across versions."""
+
+    def test_list_binary_returns_positive_class(self):
+        plugin = SHAPExplainability()
+        raw = [np.zeros((5, 3)), np.ones((5, 3))]
+        normalized = plugin._normalize_shap_output(raw)
+        assert normalized.shape == (5, 3)
+        assert np.all(normalized == 1.0)
+
+    def test_list_multiclass_returns_positive_class(self):
+        plugin = SHAPExplainability()
+        raw = [np.zeros((5, 3)), np.ones((5, 3)), np.full((5, 3), 2.0)]
+        normalized = plugin._normalize_shap_output(raw)
+        assert normalized.shape == (5, 3)
+        assert np.all(normalized == 1.0)
+
+    def test_2d_array_passes_through(self):
+        plugin = SHAPExplainability()
+        raw = np.arange(15).reshape(5, 3).astype(float)
+        normalized = plugin._normalize_shap_output(raw)
+        assert normalized.shape == (5, 3)
+        assert np.array_equal(normalized, raw)
+
+    def test_3d_binary_returns_positive_slice(self):
+        plugin = SHAPExplainability()
+        raw = np.zeros((5, 3, 2))
+        raw[..., 1] = 1.0
+        normalized = plugin._normalize_shap_output(raw)
+        assert normalized.shape == (5, 3)
+        assert np.all(normalized == 1.0)
+
+    def test_3d_multiclass_returns_positive_slice(self):
+        plugin = SHAPExplainability()
+        raw = np.zeros((5, 3, 4))
+        raw[..., 1] = 1.0
+        normalized = plugin._normalize_shap_output(raw)
+        assert normalized.shape == (5, 3)
+        assert np.all(normalized == 1.0)
+
+    def test_explanation_object(self):
+        class FakeExplanation:
+            values = np.ones((5, 3))
+        plugin = SHAPExplainability()
+        normalized = plugin._normalize_shap_output(FakeExplanation())
+        assert normalized.shape == (5, 3)
+        assert np.all(normalized == 1.0)
+
+
+class TestPluMAContract:
+    """Integration test: run plugin against example/ fixture, compare to .expected."""
+
+    @pytest.mark.slow
+    def test_plugin_matches_expected_outputs(self, tmp_path):
+        """End-to-end: plugin output must match committed .expected files within EPS."""
+        from SHAPExplainabilityPlugin import SHAPExplainabilityPlugin
+
+        repo_root = Path(__file__).resolve().parent
+        example = repo_root / "example"
+        if not (example / "model.joblib").exists():
+            pytest.skip(
+                "example/model.joblib missing - run scripts/fetch_test_data.py first"
+            )
+
+        params = tmp_path / "parameters.txt"
+        params.write_text(
+            f"model\t{example}/model.joblib\n"
+            f"features\t{example}/features.csv\n"
+            f"labels\t{example}/labels.csv\n"
+            "explainer\ttree\n"
+            "background_samples\t50\n"
+            "n_top_features\t10\n"
+            "compute_interactions\tfalse\n"
+        )
+
+        plugin = SHAPExplainabilityPlugin()
+        plugin.input(str(params))
+        plugin.run()
+        plugin.output(str(tmp_path / "output"))
+
+        EPS = 1e-8
+        for expected_file in sorted(example.glob("output.*.expected")):
+            suffix = expected_file.name[: -len(".expected")]
+            generated = tmp_path / suffix
+            assert generated.exists(), f"{suffix} was not generated"
+
+            is_csv = generated.suffix == ".csv"
+            gen_lines = sorted(generated.read_text().splitlines())
+            exp_lines = sorted(expected_file.read_text().splitlines())
+            assert len(gen_lines) == len(exp_lines), (
+                f"{suffix}: line counts differ "
+                f"({len(gen_lines)} vs {len(exp_lines)})"
+            )
+            for i, (a, b) in enumerate(zip(gen_lines, exp_lines)):
+                d1 = a.split(",") if is_csv else a.split()
+                d2 = b.split(",") if is_csv else b.split()
+                assert len(d1) == len(d2), (
+                    f"{suffix} line {i}: field count {len(d1)} vs {len(d2)}"
+                )
+                for j, (x, y) in enumerate(zip(d1, d2)):
+                    try:
+                        xf, yf = float(x), float(y)
+                        assert abs(xf - yf) <= EPS, (
+                            f"{suffix} line {i} field {j}: |{xf} - {yf}| > {EPS}"
+                        )
+                    except ValueError:
+                        assert x == y, f"{suffix} line {i} field {j}: {x!r} != {y!r}"
+
+
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])

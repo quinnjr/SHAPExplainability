@@ -1,0 +1,3 @@
+,modality,total_importance,mean_importance,std_importance,n_features,top_features,relative_contribution
+1,transcriptomics,0.27335287768391736,0.018223525178927825,0.020613794688907332,15,"['TX_worst_concave_points', 'TX_worst_perimeter', 'TX_worst_radius', 'TX_worst_area', 'TX_worst_concavity']",52.33183655618414
+0,metagenomics,0.24899240135180337,0.016599493423453557,0.017458426570703046,15,"['MG_mean_concave_points', 'MG_mean_radius', 'MG_area_error', 'MG_mean_perimeter', 'MG_mean_concavity']",47.66816344381586

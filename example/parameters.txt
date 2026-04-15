@@ -1,0 +1,7 @@
+model	plugins/SHAPExplainability/example/model.joblib
+features	plugins/SHAPExplainability/example/features.csv
+labels	plugins/SHAPExplainability/example/labels.csv
+explainer	tree
+background_samples	50
+n_top_features	10
+compute_interactions	false
